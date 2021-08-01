@@ -1,6 +1,7 @@
 
 from __future__ import absolute_import
 
+import random
 import torch
 import torch.nn as nn
 import torch.nn.init as init
@@ -8,6 +9,7 @@ from torch.autograd import Variable
 import numpy as np
 from . import pretrained_networks as pn
 import torch.nn
+from torchvision import datasets, models, transforms
 
 import lpips
 
@@ -17,7 +19,16 @@ def spatial_average(in_tens, keepdim=True):
 def upsample(in_tens, out_HW=(64,64)): # assumes scale factor is same for H and W
     in_H, in_W = in_tens.shape[2], in_tens.shape[3]
     return nn.Upsample(size=out_HW, mode='bilinear', align_corners=False)(in_tens)
+class RandomChoice(torch.nn.Module):
+    def __init__(self, transforms):
+       super().__init__()
+       self.transforms = transforms
 
+    def __call__(self, imgs):
+        t = random.choice(self.transforms)
+        return [t(img) for img in imgs]
+def create_list():
+    return transformations_list
 # Learned perceptual metric
 class LPIPS(nn.Module):
     def __init__(self, pretrained=True, net='alex', version='0.1', lpips=True, spatial=False, 
@@ -122,6 +133,63 @@ class LPIPS(nn.Module):
             return val
 
 
+class ELPIPS(LPIPS):
+    def __init__(self,transformations_list, pretrained, net, version, lpips, spatial, pnet_rand, pnet_tune, use_dropout, model_path, eval_mode, verbose):
+        super().__init__(pretrained=pretrained, net=net, version=version, lpips=lpips, spatial=spatial, pnet_rand=pnet_rand, pnet_tune=pnet_tune, use_dropout=use_dropout, model_path=model_path, eval_mode=eval_mode, verbose=verbose):
+        self.trans_list = transformations_list
+
+
+    def forward(self, in0, in1, retPerLayer=False, normalize=False):
+        def transformations(self,in0,in1):  
+            return RandomChoice(self.trans_list)([in0,in1])
+
+        ## will put this into loop : start
+        if normalize: # turn on this flag if input is [0,1] so it can be adjusted to [-1, +1]
+            in0 = 2 * in0  - 1
+            in1 = 2 * in1  - 1
+        in0,in1 = self.transformations(in0,in1)
+        #s##Tx,Ty = trans([x,y])
+
+        # v0.0 - original release had a bug, where input was not scaled
+        in0_input, in1_input = (self.scaling_layer(in0), self.scaling_layer(in1)) if self.version=='0.1' else (in0, in1)
+        outs0, outs1 = self.net.forward(in0_input), self.net.forward(in1_input)
+        feats0, feats1, diffs = {}, {}, {}
+
+        for kk in range(self.L):
+            feats0[kk], feats1[kk] = lpips.normalize_tensor(outs0[kk]), lpips.normalize_tensor(outs1[kk])
+            diffs[kk] = (feats0[kk]-feats1[kk])**2
+
+        if(self.lpips):
+            if(self.spatial):
+                res = [upsample(self.lins[kk](diffs[kk]), out_HW=in0.shape[2:]) for kk in range(self.L)]
+            else:
+                res = [spatial_average(self.lins[kk](diffs[kk]), keepdim=True) for kk in range(self.L)]
+        else:
+            if(self.spatial):
+                res = [upsample(diffs[kk].sum(dim=1,keepdim=True), out_HW=in0.shape[2:]) for kk in range(self.L)]
+            else:
+                res = [spatial_average(diffs[kk].sum(dim=1,keepdim=True), keepdim=True) for kk in range(self.L)]
+
+        val = res[0]
+        for l in range(1,self.L):
+            val += res[l]
+        ## will end loop here and return val/N
+
+
+        # a = spatial_average(self.lins[kk](diffs[kk]), keepdim=True)
+        # b = torch.max(self.lins[kk](feats0[kk]**2))
+        # for kk in range(self.L):
+        #     a += spatial_average(self.lins[kk](diffs[kk]), keepdim=True)
+        #     b = torch.max(b,torch.max(self.lins[kk](feats0[kk]**2)))
+        # a = a/self.L
+        # from IPython import embed
+        # embed()
+        # return 10*torch.log10(b/a)
+        
+        if(retPerLayer):
+            return (val, res)
+        else:
+            return val
 class ScalingLayer(nn.Module):
     def __init__(self):
         super(ScalingLayer, self).__init__()
