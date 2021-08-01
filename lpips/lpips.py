@@ -27,7 +27,8 @@ class RandomChoice(torch.nn.Module):
     def __call__(self, imgs):
         t = random.choice(self.transforms)
         return [t(img) for img in imgs]
-def create_list():
+def create_list(dict_params):
+    transformations_list = [1,2]
     return transformations_list
 # Learned perceptual metric
 class LPIPS(nn.Module):
@@ -131,11 +132,9 @@ class LPIPS(nn.Module):
             return (val, res)
         else:
             return val
-
-
 class ELPIPS(LPIPS):
     def __init__(self,transformations_list, pretrained, net, version, lpips, spatial, pnet_rand, pnet_tune, use_dropout, model_path, eval_mode, verbose):
-        super().__init__(pretrained=pretrained, net=net, version=version, lpips=lpips, spatial=spatial, pnet_rand=pnet_rand, pnet_tune=pnet_tune, use_dropout=use_dropout, model_path=model_path, eval_mode=eval_mode, verbose=verbose):
+        super().__init__(pretrained=pretrained, net=net, version=version, lpips=lpips, spatial=spatial, pnet_rand=pnet_rand, pnet_tune=pnet_tune, use_dropout=use_dropout, model_path=model_path, eval_mode=eval_mode, verbose=verbose)
         self.trans_list = transformations_list
 
 
