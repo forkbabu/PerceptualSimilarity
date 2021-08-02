@@ -167,7 +167,8 @@ class LPIPS(nn.Module):
         else:
             return val
 class ELPIPS(LPIPS):
-    def __init__(self, N_iters):
+    def __init__(self, pretrained=True, net='alex', version='0.1', lpips=True, spatial=False, 
+        pnet_rand=False, pnet_tune=False, use_dropout=True, model_path=None, eval_mode=True, verbose=True,N_iters=10):
         super().__init__(pretrained=pretrained, net=net, version=version, lpips=lpips, spatial=spatial, pnet_rand=pnet_rand, pnet_tune=pnet_tune, use_dropout=use_dropout, model_path=model_path, eval_mode=eval_mode, verbose=verbose)
         self.trans_list = create_list()
         self.N_iters = N_iters
