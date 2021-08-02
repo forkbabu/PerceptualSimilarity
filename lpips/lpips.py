@@ -33,6 +33,7 @@ permutations = torch.tile(torch.from_numpy(permutations), (repeat_count, 1))
 perms = torch.reshape(shuffle_tensor(permutations)[:N, :], [-1])
 base_indices = 3 * torch.reshape(torch.tile(torch.reshape(torch.arange(0,N), [-1, 1]), [1, 3]), [-1]) # [0, 0, 0, 3, 3, 3, 6, 6, 6, ...]
 perms += base_indices
+
 class ColorPermute(object):
     def __init__(self,perms):
 
@@ -170,11 +171,18 @@ class ELPIPS(LPIPS):
     def __init__(self, pretrained=True, net='alex', version='0.1', lpips=True, spatial=False, 
         pnet_rand=False, pnet_tune=False, use_dropout=True, model_path=None, eval_mode=True, verbose=True,N_iters=10):
         super().__init__(pretrained=pretrained, net=net, version=version, lpips=lpips, spatial=spatial, pnet_rand=pnet_rand, pnet_tune=pnet_tune, use_dropout=use_dropout, model_path=model_path, eval_mode=eval_mode, verbose=verbose)
-        self.trans_list = create_list()
+        #self.trans_list = create_list()
         self.N_iters = N_iters
 
-    def transformations(self,in0,in1):
-        return TransFeeder(self.trans_list)([in0,in1])
+    def transformations(self):
+        return transforms.Compose([
+        transforms.Resize(256, interpolation='bilinear', max_size=None, antialias=None),
+        transforms.RandomCrop(256//random.randint(8,16), padding=random.randint(2,9), pad_if_needed=True, fill=0, padding_mode='constant'), #cropping is done after padding
+        transforms.RandomHorizontalFlip(p=random.uniform(0.01, 0.99)),
+        transforms.RandomVerticalFlip(p=random.uniform(0.01, 0.99)),
+        transforms.RandomRotation(90, interpolation='nearest', expand=False, center=None, fill=0, resample=None),
+        ColorPermute(perms)
+        ])
 
 
     def forward(self, in0, in1, retPerLayer=False, normalize=False):
@@ -186,7 +194,8 @@ class ELPIPS(LPIPS):
             if normalize: # turn on this flag if input is [0,1] so it can be adjusted to [-1, +1]
                 in0 = 2 * in0  - 1
                 in1 = 2 * in1  - 1
-            in0,in1 = self.transformations(in0,in1)
+            in0 = self.transformations(in0)
+            in1 = self.transformations(in1)
             #s##Tx,Ty = trans([x,y])
             # v0.0 - original release had a bug, where input was not scaled
             in0_input, in1_input = (self.scaling_layer(in0), self.scaling_layer(in1)) if self.version=='0.1' else (in0, in1)
