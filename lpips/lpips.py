@@ -213,8 +213,7 @@ class ELPIPS(LPIPS):
         if(retPerLayer):       # disable this for ELPIPS
             return (val, res)# disable this for ELPIPS
         else:
-            k = torch.Tensor(np.mean(sum)).cuda()
-
+            k = torch.mean(torch.stack(sum)).cuda()
             return k
 class ScalingLayer(nn.Module):
     def __init__(self):
