@@ -178,7 +178,7 @@ class ELPIPS(LPIPS):
 
     def forward(self, in0, in1, retPerLayer=False, normalize=False):
         
-        sum = torch.Tensor(0).cuda()
+        sum = []#torch.Tensor(0).cuda()
 
         ## will put this into loop : start
         for i in range(0,self.N_iters):
@@ -208,14 +208,13 @@ class ELPIPS(LPIPS):
             val = res[0]
             for l in range(1,self.L):
                 val += res[l]
-            print(f"Running Ensemble {i+1}: Distance is {res[0]}")
-            sum= torch.add(sum,val)
+            print(f"Running Ensemble {i+1}: Distance is {res[0].numpy()}")
+            sum.append(val)
         if(retPerLayer):       # disable this for ELPIPS
             return (val, res)# disable this for ELPIPS
         else:
-            print(sum.get_device())
-            k = torch.div(sum,self.N_iters)
-            print(k.get_device())
+            k = torch.Tensor(np.mean(sum)).cuda()
+
             return k
 class ScalingLayer(nn.Module):
     def __init__(self):
