@@ -205,27 +205,18 @@ class ELPIPS(LPIPS):
                     res = [upsample(diffs[kk].sum(dim=1,keepdim=True), out_HW=in0.shape[2:]) for kk in range(self.L)]
                 else:
                     res = [spatial_average(diffs[kk].sum(dim=1,keepdim=True), keepdim=True) for kk in range(self.L)]
-            val = res[0].cuda()
+            val = res[0]
             for l in range(1,self.L):
                 val += res[l]
             print(f"Running Ensemble {i+1}: Distance is {res[0]}")
-            sum= torch.add(sum,val).cuda()
-
-        ## will end loop here and return val/N
-        # a = spatial_average(self.lins[kk](diffs[kk]), keepdim=True)
-        # b = torch.max(self.lins[kk](feats0[kk]**2))
-        # for kk in range(self.L):
-        #     a += spatial_average(self.lins[kk](diffs[kk]), keepdim=True)
-        #     b = torch.max(b,torch.max(self.lins[kk](feats0[kk]**2)))
-        # a = a/self.L
-        # from IPython import embed
-        # embed()
-        # return 10*torch.log10(b/a)
-        
+            sum= torch.add(sum,val)
         if(retPerLayer):       # disable this for ELPIPS
             return (val, res)# disable this for ELPIPS
         else:
-            return torch.div(sum,self.N_iters)
+            print(sum.get_device())
+            k = torch.div(sum,self.N_iters)
+            print(k.get_device())
+            return k
 class ScalingLayer(nn.Module):
     def __init__(self):
         super(ScalingLayer, self).__init__()
