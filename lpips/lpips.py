@@ -173,10 +173,12 @@ class ELPIPS(LPIPS):
         self.trans_list = create_list()
         self.N_iters = N_iters
 
+    def transformations(self,in0,in1):
+        return TransFeeder(self.trans_list)([in0,in1])
+
 
     def forward(self, in0, in1, retPerLayer=False, normalize=False):
-        def transformations(self,in0,in1):  
-            return TransFeeder(self.trans_list)([in0,in1])
+        
         sum = 0
 
         ## will put this into loop : start
