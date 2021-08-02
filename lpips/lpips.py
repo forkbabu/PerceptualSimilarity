@@ -66,7 +66,7 @@ class LPIPS(nn.Module):
         super(LPIPS, self).__init__()
         if(verbose):
             print('Setting up [%s] perceptual loss: trunk [%s], v[%s], spatial [%s]'%
-                ('LPIPS' if lpips else 'baseline', net, version, 'on' if spatial else 'off'))
+                ('ELPIPS' if lpips else 'baseline', net, version, 'on' if spatial else 'off'))
 
         self.pnet_type = net
         self.pnet_tune = pnet_tune
@@ -164,10 +164,6 @@ class ELPIPS(LPIPS):
         super().__init__(pretrained=pretrained, net=net, version=version, lpips=lpips, spatial=spatial, pnet_rand=pnet_rand, pnet_tune=pnet_tune, use_dropout=use_dropout, model_path=model_path, eval_mode=eval_mode, verbose=verbose)
         #self.trans_list = create_list()
         self.N_iters = N_iters
-        if(verbose):
-            print('Setting up [%s] perceptual loss: trunk [%s], v[%s], spatial [%s]'%
-                ('ELPIPS' if lpips else 'baseline', net, version, 'on' if spatial else 'off'))
-
 
     def transformations(self):
         return transforms.Compose([
@@ -209,10 +205,10 @@ class ELPIPS(LPIPS):
                     res = [upsample(diffs[kk].sum(dim=1,keepdim=True), out_HW=in0.shape[2:]) for kk in range(self.L)]
                 else:
                     res = [spatial_average(diffs[kk].sum(dim=1,keepdim=True), keepdim=True) for kk in range(self.L)]
-            val = res[0]
+            val = res[0].cuda()
             for l in range(1,self.L):
                 val += res[l]
-            sum= torch.add(sum,val)
+            sum= torch.add(sum,val).cuda()
 
         ## will end loop here and return val/N
         # a = spatial_average(self.lins[kk](diffs[kk]), keepdim=True)
