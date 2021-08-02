@@ -191,11 +191,12 @@ class ELPIPS(LPIPS):
 
         ## will put this into loop : start
         for _ in range(0,self.N_iters):
+            trans = self.transformations()
             if normalize: # turn on this flag if input is [0,1] so it can be adjusted to [-1, +1]
                 in0 = 2 * in0  - 1
                 in1 = 2 * in1  - 1
-            in0 = self.transformations(in0)
-            in1 = self.transformations(in1)
+            in0 = trans(in0)
+            in1 = trans(in1)
             #s##Tx,Ty = trans([x,y])
             # v0.0 - original release had a bug, where input was not scaled
             in0_input, in1_input = (self.scaling_layer(in0), self.scaling_layer(in1)) if self.version=='0.1' else (in0, in1)
