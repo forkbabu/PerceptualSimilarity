@@ -181,7 +181,7 @@ class ELPIPS(LPIPS):
         sum = torch.Tensor(0).cuda()
 
         ## will put this into loop : start
-        for _ in range(0,self.N_iters):
+        for i in range(0,self.N_iters):
             trans = self.transformations()
             if normalize: # turn on this flag if input is [0,1] so it can be adjusted to [-1, +1]
                 in0 = 2 * in0  - 1
@@ -208,6 +208,7 @@ class ELPIPS(LPIPS):
             val = res[0].cuda()
             for l in range(1,self.L):
                 val += res[l]
+            print(f"Running Ensemble {i+1}: Distance is {res[0]}")
             sum= torch.add(sum,val).cuda()
 
         ## will end loop here and return val/N
