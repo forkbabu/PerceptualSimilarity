@@ -43,7 +43,7 @@ class ColorPermute(object):
         shape = list(pic.size())
         N,C,H,W = shape[0],shape[1],shape[2],shape[3]
         pic = pic.view(-1,H,W)
-        pic = torch.gather(input=pic,dim =1,index=self.perms)
+        pic = torch.gather(input=pic,dim =0,index=self.perms)
         pic = pic.view(N,C,H,W)
         return pic
     def __repr__(self):
