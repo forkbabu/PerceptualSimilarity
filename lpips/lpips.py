@@ -171,8 +171,8 @@ class ELPIPS(LPIPS):
         transforms.RandomCrop(256//random.randint(8,16), padding=random.randint(2,9), pad_if_needed=True, fill=0, padding_mode='constant'), #cropping is done after padding
         transforms.RandomHorizontalFlip(p=random.uniform(0.01, 0.99)),
         transforms.RandomVerticalFlip(p=random.uniform(0.01, 0.99)),
-        transforms.RandomRotation(90, expand=False, center=None, fill=0, resample=None),
-        ColorPermute(perms)
+        transforms.RandomRotation(90, expand=False, center=None, fill=0, resample=None)#,
+        #ColorPermute(perms)
         ])
 
 
