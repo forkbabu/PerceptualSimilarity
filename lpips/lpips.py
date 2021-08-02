@@ -210,10 +210,9 @@ class ELPIPS(LPIPS):
                 else:
                     res = [spatial_average(diffs[kk].sum(dim=1,keepdim=True), keepdim=True) for kk in range(self.L)]
             val = res[0]
-            print(type(val))
             for l in range(1,self.L):
                 val += res[l]
-            sum+=val
+            sum= torch.add(sum,val)
 
         ## will end loop here and return val/N
         # a = spatial_average(self.lins[kk](diffs[kk]), keepdim=True)
@@ -229,7 +228,7 @@ class ELPIPS(LPIPS):
         if(retPerLayer):       # disable this for ELPIPS
             return (val, res)# disable this for ELPIPS
         else:
-            return float(sum/self.N_iters)
+            return sum/self.N_iters
 class ScalingLayer(nn.Module):
     def __init__(self):
         super(ScalingLayer, self).__init__()
@@ -325,3 +324,14 @@ def print_network(net):
         num_params += param.numel()
     print('Network',net)
     print('Total number of parameters: %d' % num_params)
+
+
+'''
+import lpips
+loss = lpips.ELPIPS(net='alex')
+import torch
+img0 = torch.zeros(1,3,64,64)
+img1 = torch.zeros(1,3,64,64)
+d = loss(img0, img1)
+loss.backward()
+'''
