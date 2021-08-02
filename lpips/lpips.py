@@ -21,16 +21,22 @@ def upsample(in_tens, out_HW=(64,64)): # assumes scale factor is same for H and 
     return nn.Upsample(size=out_HW, mode='bilinear', align_corners=False)(in_tens)
 import itertools
 N = 1
+def shuffle_tensor(t:torch.Tensor):
+    idx = torch.randperm(t.nelement())
+    t = t.view(-1)[idx].view(t.size())
+    return t
+
+
 permutations = np.asarray(list(itertools.permutations(range(3))), dtype=np.int32)
 repeat_count = (N + len(permutations) - 1) // len(permutations)
 permutations = torch.tile(torch.from_numpy(permutations), (repeat_count, 1))
-perms = torch.reshape(torch.randperm(permutations)[:N, :], [-1])
-base_indices = 3 * torch.reshape(torch.tile(torch.reshape(torch.range(N), [-1, 1]), [1, 3]), [-1]) # [0, 0, 0, 3, 3, 3, 6, 6, 6, ...]
+perms = torch.reshape(shuffle_tensor(permutations)[:N, :], [-1])
+base_indices = 3 * torch.reshape(torch.tile(torch.reshape(torch.arange(0,N), [-1, 1]), [1, 3]), [-1]) # [0, 0, 0, 3, 3, 3, 6, 6, 6, ...]
 perms += base_indices
 class ColorPermute(object):
     def __init__(self,perms):
 
-        self.perms = perms
+        self.perms = perms.long() ## index takes LongTensor
 
     def __call__(self, pic):
         shape = list(pic.Size())
@@ -170,6 +176,7 @@ class ELPIPS(LPIPS):
     def forward(self, in0, in1, retPerLayer=False, normalize=False):
         def transformations(self,in0,in1):  
             return TransFeeder(self.trans_list)([in0,in1])
+        sum = 0
 
         ## will put this into loop : start
         for _ in range(0,self.N_iters):
@@ -198,10 +205,9 @@ class ELPIPS(LPIPS):
             val = res[0]
             for l in range(1,self.L):
                 val += res[l]
+            sum+=val
 
         ## will end loop here and return val/N
-
-
         # a = spatial_average(self.lins[kk](diffs[kk]), keepdim=True)
         # b = torch.max(self.lins[kk](feats0[kk]**2))
         # for kk in range(self.L):
@@ -212,10 +218,10 @@ class ELPIPS(LPIPS):
         # embed()
         # return 10*torch.log10(b/a)
         
-        if(retPerLayer):
-            return (val, res)
+        if(retPerLayer):       # disable this for ELPIPS
+            return (val, res)# disable this for ELPIPS
         else:
-            return val
+            return sum//self.N_iters
 class ScalingLayer(nn.Module):
     def __init__(self):
         super(ScalingLayer, self).__init__()
