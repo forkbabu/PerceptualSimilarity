@@ -144,25 +144,15 @@ class LPIPS(nn.Module):
         for l in range(1,self.L):
             val += res[l]
 
-        # a = spatial_average(self.lins[kk](diffs[kk]), keepdim=True)
-        # b = torch.max(self.lins[kk](feats0[kk]**2))
-        # for kk in range(self.L):
-        #     a += spatial_average(self.lins[kk](diffs[kk]), keepdim=True)
-        #     b = torch.max(b,torch.max(self.lins[kk](feats0[kk]**2)))
-        # a = a/self.L
-        # from IPython import embed
-        # embed()
-        # return 10*torch.log10(b/a)
-        
         if(retPerLayer):
             return (val, res)
         else:
             return val
+
 class ELPIPS(LPIPS):
     def __init__(self, pretrained=True, net='alex', version='0.1', lpips=True, spatial=False, 
         pnet_rand=False, pnet_tune=False, use_dropout=True, model_path=None, eval_mode=True, verbose=True,N_iters=10):
         super().__init__(pretrained=pretrained, net=net, version=version, lpips=lpips, spatial=spatial, pnet_rand=pnet_rand, pnet_tune=pnet_tune, use_dropout=use_dropout, model_path=model_path, eval_mode=eval_mode, verbose=verbose)
-        #self.trans_list = create_list()
         self.N_iters = N_iters
 
     def transformations(self):
@@ -178,9 +168,8 @@ class ELPIPS(LPIPS):
 
     def forward(self, in0, in1, retPerLayer=False, normalize=False):
         
-        sum = []#torch.Tensor(0).cuda()
+        sum = []
 
-        ## will put this into loop : start
         for i in range(0,self.N_iters):
             trans = self.transformations()
             if normalize: # turn on this flag if input is [0,1] so it can be adjusted to [-1, +1]
@@ -214,7 +203,7 @@ class ELPIPS(LPIPS):
             return (val, res)# disable this for ELPIPS
         else:
             k = torch.mean(torch.stack(sum)).cuda()
-            return k
+            return k  
 class ScalingLayer(nn.Module):
     def __init__(self):
         super(ScalingLayer, self).__init__()
@@ -310,14 +299,3 @@ def print_network(net):
         num_params += param.numel()
     print('Network',net)
     print('Total number of parameters: %d' % num_params)
-
-
-'''
-import lpips
-loss = lpips.ELPIPS(net='alex')
-import torch
-img0 = torch.zeros(1,3,64,64)
-img1 = torch.zeros(1,3,64,64)
-d = loss(img0, img1)
-loss.backward()
-'''
