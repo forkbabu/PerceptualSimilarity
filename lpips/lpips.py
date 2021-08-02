@@ -208,7 +208,7 @@ class ELPIPS(LPIPS):
             val = res[0]
             for l in range(1,self.L):
                 val += res[l]
-            print(f"Running Ensemble {i+1}: Distance is {res[0].numpy()}")
+            print(f"Running Ensemble {i+1}: Distance is {res[0]}")
             sum.append(val)
         if(retPerLayer):       # disable this for ELPIPS
             return (val, res)# disable this for ELPIPS
