@@ -40,7 +40,7 @@ class ColorPermute(object):
         self.perms = perms.long() ## index takes LongTensor
 
     def __call__(self, pic):
-        shape = list(pic.Size())
+        shape = list(pic.size())
         N,C,H,W = shape[0],shape[1],shape[2],shape[3]
         pic = pic.view(-1,H,W)
         pic = torch.gather(input=pic,dim =1,index=self.perms)
