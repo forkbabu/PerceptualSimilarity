@@ -182,7 +182,7 @@ class ELPIPS(LPIPS):
 
     def forward(self, in0, in1, retPerLayer=False, normalize=False):
         
-        sum = torch.Tensor(0)
+        sum = torch.Tensor(0).cuda()
 
         ## will put this into loop : start
         for _ in range(0,self.N_iters):
