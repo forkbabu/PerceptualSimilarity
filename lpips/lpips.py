@@ -19,17 +19,46 @@ def spatial_average(in_tens, keepdim=True):
 def upsample(in_tens, out_HW=(64,64)): # assumes scale factor is same for H and W
     in_H, in_W = in_tens.shape[2], in_tens.shape[3]
     return nn.Upsample(size=out_HW, mode='bilinear', align_corners=False)(in_tens)
-class RandomChoice(torch.nn.Module):
+import itertools
+N = 1
+permutations = np.asarray(list(itertools.permutations(range(3))), dtype=np.int32)
+repeat_count = (N + len(permutations) - 1) // len(permutations)
+permutations = torch.tile(torch.to_tensor(permutations), torch.constant([repeat_count, 1]))
+perms = torch.reshape(torch.random.shuffle(permutations)[:N, :], [-1])
+base_indices = 3 * torch.reshape(torch.tile(torch.reshape(torch.range(N), [-1, 1]), [1, 3]), [-1]) # [0, 0, 0, 3, 3, 3, 6, 6, 6, ...]
+perms += base_indices
+class ColorPermute(object):
+    def __init__(self,perms):
+
+        self.perms = perms
+
+    def __call__(self, pic):
+        shape = list(pic.Size())
+        N,C,H,W = shape[0],shape[1],shape[2],shape[3]
+        pic = pic.view(-1,H,W)
+        pic = torch.gather(input=pic,dim =1,index=self.perms)
+        pic = pic.view(N,C,H,W)
+        return pic
+    def __repr__(self):
+        return self.__class__.__name__ + '()'
+class TransFeeder(torch.nn.Module):
     def __init__(self, transforms):
        super().__init__()
        self.transforms = transforms
 
     def __call__(self, imgs):
-        t = random.choice(self.transforms)
-        return [t(img) for img in imgs]
-def create_list(dict_params):
-    transformations_list = [1,2]
-    return transformations_list
+        #t = random.choice(self.transforms)
+        return [self.transforms(img) for img in imgs]
+def create_list():
+    return [
+        transforms.Resize(256, interpolation='bilinear', max_size=None, antialias=None),
+        transforms.RandomCrop(256//random.randint(8,16), padding=random.randint(2,9), pad_if_needed=True, fill=0, padding_mode='constant'), #cropping is done after padding
+        transforms.RandomHorizontalFlip(p=random.uniform(0.01, 0.99)),
+        transforms.RandomVerticalFlip(p=random.uniform(0.01, 0.99)),
+        transforms.RandomRotation(90, interpolation='nearest', expand=False, center=None, fill=0, resample=None),
+        ColorPermute(perms)
+        ]
+
 # Learned perceptual metric
 class LPIPS(nn.Module):
     def __init__(self, pretrained=True, net='alex', version='0.1', lpips=True, spatial=False, 
@@ -133,45 +162,44 @@ class LPIPS(nn.Module):
         else:
             return val
 class ELPIPS(LPIPS):
-    def __init__(self,transformations_list, pretrained, net, version, lpips, spatial, pnet_rand, pnet_tune, use_dropout, model_path, eval_mode, verbose):
+    def __init__(self, pretrained, net, version, lpips, spatial, pnet_rand, pnet_tune, use_dropout, model_path, eval_mode, verbose,N_iters):
         super().__init__(pretrained=pretrained, net=net, version=version, lpips=lpips, spatial=spatial, pnet_rand=pnet_rand, pnet_tune=pnet_tune, use_dropout=use_dropout, model_path=model_path, eval_mode=eval_mode, verbose=verbose)
-        self.trans_list = transformations_list
+        self.trans_list = create_list()
+        self.N_iters = N_iters
 
 
     def forward(self, in0, in1, retPerLayer=False, normalize=False):
         def transformations(self,in0,in1):  
-            return RandomChoice(self.trans_list)([in0,in1])
+            return TransFeeder(self.trans_list)([in0,in1])
 
         ## will put this into loop : start
-        if normalize: # turn on this flag if input is [0,1] so it can be adjusted to [-1, +1]
-            in0 = 2 * in0  - 1
-            in1 = 2 * in1  - 1
-        in0,in1 = self.transformations(in0,in1)
-        #s##Tx,Ty = trans([x,y])
-
-        # v0.0 - original release had a bug, where input was not scaled
-        in0_input, in1_input = (self.scaling_layer(in0), self.scaling_layer(in1)) if self.version=='0.1' else (in0, in1)
-        outs0, outs1 = self.net.forward(in0_input), self.net.forward(in1_input)
-        feats0, feats1, diffs = {}, {}, {}
-
-        for kk in range(self.L):
-            feats0[kk], feats1[kk] = lpips.normalize_tensor(outs0[kk]), lpips.normalize_tensor(outs1[kk])
-            diffs[kk] = (feats0[kk]-feats1[kk])**2
-
-        if(self.lpips):
-            if(self.spatial):
-                res = [upsample(self.lins[kk](diffs[kk]), out_HW=in0.shape[2:]) for kk in range(self.L)]
+        for _ in range(0,self.N_iters):
+            if normalize: # turn on this flag if input is [0,1] so it can be adjusted to [-1, +1]
+                in0 = 2 * in0  - 1
+                in1 = 2 * in1  - 1
+            in0,in1 = self.transformations(in0,in1)
+            #s##Tx,Ty = trans([x,y])
+            # v0.0 - original release had a bug, where input was not scaled
+            in0_input, in1_input = (self.scaling_layer(in0), self.scaling_layer(in1)) if self.version=='0.1' else (in0, in1)
+            outs0, outs1 = self.net.forward(in0_input), self.net.forward(in1_input)
+            feats0, feats1, diffs = {}, {}, {}
+            for kk in range(self.L):
+                feats0[kk], feats1[kk] = lpips.normalize_tensor(outs0[kk]), lpips.normalize_tensor(outs1[kk])
+                diffs[kk] = (feats0[kk]-feats1[kk])**2
+            if(self.lpips):
+                if(self.spatial):
+                    res = [upsample(self.lins[kk](diffs[kk]), out_HW=in0.shape[2:]) for kk in range(self.L)]
+                else:
+                    res = [spatial_average(self.lins[kk](diffs[kk]), keepdim=True) for kk in range(self.L)]
             else:
-                res = [spatial_average(self.lins[kk](diffs[kk]), keepdim=True) for kk in range(self.L)]
-        else:
-            if(self.spatial):
-                res = [upsample(diffs[kk].sum(dim=1,keepdim=True), out_HW=in0.shape[2:]) for kk in range(self.L)]
-            else:
-                res = [spatial_average(diffs[kk].sum(dim=1,keepdim=True), keepdim=True) for kk in range(self.L)]
+                if(self.spatial):
+                    res = [upsample(diffs[kk].sum(dim=1,keepdim=True), out_HW=in0.shape[2:]) for kk in range(self.L)]
+                else:
+                    res = [spatial_average(diffs[kk].sum(dim=1,keepdim=True), keepdim=True) for kk in range(self.L)]
+            val = res[0]
+            for l in range(1,self.L):
+                val += res[l]
 
-        val = res[0]
-        for l in range(1,self.L):
-            val += res[l]
         ## will end loop here and return val/N
 
 
