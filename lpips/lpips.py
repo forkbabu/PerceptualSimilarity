@@ -164,6 +164,10 @@ class ELPIPS(LPIPS):
         super().__init__(pretrained=pretrained, net=net, version=version, lpips=lpips, spatial=spatial, pnet_rand=pnet_rand, pnet_tune=pnet_tune, use_dropout=use_dropout, model_path=model_path, eval_mode=eval_mode, verbose=verbose)
         #self.trans_list = create_list()
         self.N_iters = N_iters
+        if(verbose):
+            print('Setting up [%s] perceptual loss: trunk [%s], v[%s], spatial [%s]'%
+                ('ELPIPS' if lpips else 'baseline', net, version, 'on' if spatial else 'off'))
+
 
     def transformations(self):
         return transforms.Compose([
@@ -178,7 +182,7 @@ class ELPIPS(LPIPS):
 
     def forward(self, in0, in1, retPerLayer=False, normalize=False):
         
-        sum = 0
+        sum = torch.Tensor(0)
 
         ## will put this into loop : start
         for _ in range(0,self.N_iters):
@@ -188,7 +192,6 @@ class ELPIPS(LPIPS):
                 in1 = 2 * in1  - 1
             in0 = trans(in0)
             in1 = trans(in1)
-            #s##Tx,Ty = trans([x,y])
             # v0.0 - original release had a bug, where input was not scaled
             in0_input, in1_input = (self.scaling_layer(in0), self.scaling_layer(in1)) if self.version=='0.1' else (in0, in1)
             outs0, outs1 = self.net.forward(in0_input), self.net.forward(in1_input)
@@ -207,6 +210,7 @@ class ELPIPS(LPIPS):
                 else:
                     res = [spatial_average(diffs[kk].sum(dim=1,keepdim=True), keepdim=True) for kk in range(self.L)]
             val = res[0]
+            print(type(val))
             for l in range(1,self.L):
                 val += res[l]
             sum+=val
@@ -225,7 +229,6 @@ class ELPIPS(LPIPS):
         if(retPerLayer):       # disable this for ELPIPS
             return (val, res)# disable this for ELPIPS
         else:
-            print(sum)
             return float(sum/self.N_iters)
 class ScalingLayer(nn.Module):
     def __init__(self):
