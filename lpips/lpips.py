@@ -168,7 +168,7 @@ class ELPIPS(LPIPS):
     def transformations(self):
         return transforms.Compose([
         transforms.Resize(256, max_size=None, antialias=None),
-        transforms.RandomCrop(256//random.randint(8,16), padding=random.randint(2,9), pad_if_needed=True, fill=0, padding_mode='constant'), #cropping is done after padding
+        transforms.RandomCrop(256//random.randint(8,16), padding=random.randint(2,4), pad_if_needed=True, fill=0, padding_mode='constant'), #cropping is done after padding
         transforms.RandomHorizontalFlip(p=random.uniform(0.01, 0.99)),
         transforms.RandomVerticalFlip(p=random.uniform(0.01, 0.99)),
         transforms.RandomRotation(90, expand=False, center=None, fill=0, resample=None)#,
@@ -188,6 +188,7 @@ class ELPIPS(LPIPS):
                 in1 = 2 * in1  - 1
             in0 = trans(in0)
             in1 = trans(in1)
+            print(in0.shape)
             #s##Tx,Ty = trans([x,y])
             # v0.0 - original release had a bug, where input was not scaled
             in0_input, in1_input = (self.scaling_layer(in0), self.scaling_layer(in1)) if self.version=='0.1' else (in0, in1)
