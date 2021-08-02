@@ -228,7 +228,7 @@ class ELPIPS(LPIPS):
         if(retPerLayer):       # disable this for ELPIPS
             return (val, res)# disable this for ELPIPS
         else:
-            return sum/self.N_iters
+            return torch.div(sum,self.N_iters)
 class ScalingLayer(nn.Module):
     def __init__(self):
         super(ScalingLayer, self).__init__()
