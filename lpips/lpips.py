@@ -188,7 +188,6 @@ class ELPIPS(LPIPS):
                 in1 = 2 * in1  - 1
             in0 = trans(in0)
             in1 = trans(in1)
-            print(in0.shape)
             #s##Tx,Ty = trans([x,y])
             # v0.0 - original release had a bug, where input was not scaled
             in0_input, in1_input = (self.scaling_layer(in0), self.scaling_layer(in1)) if self.version=='0.1' else (in0, in1)
@@ -226,7 +225,8 @@ class ELPIPS(LPIPS):
         if(retPerLayer):       # disable this for ELPIPS
             return (val, res)# disable this for ELPIPS
         else:
-            return sum//self.N_iters
+            print(sum)
+            return float(sum/self.N_iters)
 class ScalingLayer(nn.Module):
     def __init__(self):
         super(ScalingLayer, self).__init__()
