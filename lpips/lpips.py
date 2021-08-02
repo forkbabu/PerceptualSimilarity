@@ -37,7 +37,7 @@ perms += base_indices
 class ColorPermute(object):
     def __init__(self,perms):
 
-        self.perms = perms.long() ## index takes LongTensor
+        self.perms = perms.long().cuda() ## index takes LongTensor
 
     def __call__(self, pic):
         shape = list(pic.size())
@@ -55,15 +55,6 @@ class TransFeeder(torch.nn.Module):
     def __call__(self, imgs):
         #t = random.choice(self.transforms)
         return [self.transforms(img) for img in imgs]
-def create_list():
-    return [
-        transforms.Resize(256, interpolation='bilinear', max_size=None, antialias=None),
-        transforms.RandomCrop(256//random.randint(8,16), padding=random.randint(2,9), pad_if_needed=True, fill=0, padding_mode='constant'), #cropping is done after padding
-        transforms.RandomHorizontalFlip(p=random.uniform(0.01, 0.99)),
-        transforms.RandomVerticalFlip(p=random.uniform(0.01, 0.99)),
-        transforms.RandomRotation(90, interpolation='nearest', expand=False, center=None, fill=0, resample=None),
-        ColorPermute(perms)
-        ]
 
 # Learned perceptual metric
 class LPIPS(nn.Module):
