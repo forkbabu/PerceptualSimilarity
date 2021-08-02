@@ -23,7 +23,7 @@ import itertools
 N = 1
 permutations = np.asarray(list(itertools.permutations(range(3))), dtype=np.int32)
 repeat_count = (N + len(permutations) - 1) // len(permutations)
-permutations = torch.tile(torch.to_tensor(permutations), torch.constant([repeat_count, 1]))
+permutations = torch.tile(torch.from_numpy(permutations), torch.constant([repeat_count, 1]))
 perms = torch.reshape(torch.random.shuffle(permutations)[:N, :], [-1])
 base_indices = 3 * torch.reshape(torch.tile(torch.reshape(torch.range(N), [-1, 1]), [1, 3]), [-1]) # [0, 0, 0, 3, 3, 3, 6, 6, 6, ...]
 perms += base_indices
