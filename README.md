@@ -1,4 +1,8 @@
 
+## Pytorch Implementation of ELPIPS
+- Subclassed LPIPS from `lpips.py`
+
+#### Original README follows
 ## Perceptual Similarity Metric and Dataset [[Project Page]](http://richzhang.github.io/PerceptualSimilarity/)
 
 **The Unreasonable Effectiveness of Deep Features as a Perceptual Metric**  
